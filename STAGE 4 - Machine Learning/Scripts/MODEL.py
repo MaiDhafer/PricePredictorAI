@@ -1,12 +1,13 @@
+# IMPORT LIBRARIES
 import joblib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from keras.layers import LSTM, Dense, Dropout
 from keras.models import Sequential, load_model
 from sklearn.model_selection import train_test_split
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.layers import LSTM, Dense, Dropout, Input
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # INPUT FILE
@@ -50,8 +51,8 @@ x_val_lstm = reshape_for_lstm(x_val)
 
 # LSTM MODEL
 model = Sequential()
-model.add(LSTM(50, activation='tanh', input_shape=(x_train_lstm.shape[1], x_train_lstm.shape[2])))
-model.add(Dropout(0.2))
+model.add(LSTM(128, activation='tanh', input_shape=(x_train_lstm.shape[1], x_train_lstm.shape[2])))
+model.add(Dropout(0.3))
 model.add(Dense(1))
 model.compile(optimizer='adam', loss='mean_squared_error')
 
@@ -62,8 +63,8 @@ early_stopping_callback = EarlyStopping(monitor='val_loss', patience=10, verbose
 # MODEL TRAINING
 history = model.fit(
     x_train_lstm, y_train,
-    epochs=100,
-    batch_size=128,
+    epochs=150,
+    batch_size=32,
     validation_data=(x_val_lstm, y_val),
     callbacks=[checkpoint_callback, early_stopping_callback],
     verbose=1
@@ -75,30 +76,45 @@ loaded_model = load_model('../Model/PricePredictor MODEL/BestPricePredictor.kera
 # MAKE PREDICTIONS
 y_test_pred = loaded_model.predict(x_test_lstm)
 y_val_pred = loaded_model.predict(x_val_lstm)
+y_train_pred = loaded_model.predict(x_train_lstm)
 
 # RESCALE PREDICTIONS AND ACTUAL VALUES BACK TO ORIGINAL SCALE
 y_test = scaler_y.inverse_transform(y_test)
 y_val = scaler_y.inverse_transform(y_val)
+y_train = scaler_y.inverse_transform(y_train)
 y_test_pred = scaler_y.inverse_transform(y_test_pred)
 y_val_pred = scaler_y.inverse_transform(y_val_pred)
+y_train_pred = scaler_y.inverse_transform(y_train_pred)
 
 # MEASURES DIFFERENCE BETWEEN PREDICTIONS AND ACTUAL VALUES
 mse_test = mean_squared_error(y_test, y_test_pred)
 mse_val = mean_squared_error(y_val, y_val_pred)
-print(f'Mean Squared Error on Test Set: {mse_test}')
-print(f'Mean Squared Error on Validation Set: {mse_val}')
+mse_train = mean_squared_error(y_train, y_train_pred)
 
-# MEASURES AVERAGE ABSOLUTE DIFFERENCE BETWEEN PREDICTIONS AND ACTUAL VALUES
 mae_test = mean_absolute_error(y_test, y_test_pred)
 mae_val = mean_absolute_error(y_val, y_val_pred)
-print(f'Mean Absolute Error on Test Set: {mae_test}')
-print(f'Mean Absolute Error on Validation Set: {mae_val}')
+mae_train = mean_absolute_error(y_train, y_train_pred)
 
-# MEASURES THE PROPORTION OF VARIANCE BY THE MODEL
 r2_test = r2_score(y_test, y_test_pred)
 r2_val = r2_score(y_val, y_val_pred)
-print(f'R² Score on Test Set: {r2_test}')
-print(f'R² Score on Validation Set: {r2_val}')
+r2_train = r2_score(y_train, y_train_pred)
+
+# SAVE MEASUREMENT IN TEXT
+metrics = (
+    f'Mean Squared Error on Test Set: {mse_test}\n'
+    f'Mean Squared Error on Validation Set: {mse_val}\n'
+    f'Mean Squared Error on Training Set: {mse_train}\n\n'
+    f'Mean Absolute Error on Test Set: {mae_test}\n'
+    f'Mean Absolute Error on Validation Set: {mae_val}\n'
+    f'Mean Absolute Error on Training Set: {mae_train}\n\n'
+    f'R² Score on Test Set: {r2_test}\n'
+    f'R² Score on Validation Set: {r2_val}\n'
+    f'R² Score on Training Set: {r2_train}\n'
+)
+
+print(metrics)
+with open('../Model/PricePredictor MODEL/ModelMetrics.txt', 'w') as f:
+    f.write(metrics)
 
 # VISUALIZATION OF PREDICTED VS ACTUAL VALUES
 def plot_predictions(y_true, y_pred, title, filename):
