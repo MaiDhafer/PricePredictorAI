@@ -1,0 +1,11 @@
+Mean Squared Error on Test Set: 193762.20557963647
+Mean Squared Error on Validation Set: 192669.47301960882
+Mean Squared Error on Training Set: 200078.15708842746
+
+Mean Absolute Error on Test Set: 222.3185942108738
+Mean Absolute Error on Validation Set: 223.46898829324783
+Mean Absolute Error on Training Set: 222.72919846086575
+
+R� Score on Test Set: 0.31941680689712715
+R� Score on Validation Set: 0.3091221228037083
+R� Score on Training Set: 0.31353889353056974
